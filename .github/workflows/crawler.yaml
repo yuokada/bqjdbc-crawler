@@ -12,7 +12,7 @@ jobs:
     name: Upgrade & Open Pull Request
     runs-on: ubuntu-latest
     env:
-      BRANCH_NAME: master
+      BRANCH_NAME: upload-test
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-python@v5
