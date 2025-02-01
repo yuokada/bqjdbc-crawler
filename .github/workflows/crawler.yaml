@@ -1,0 +1,38 @@
+---
+name: Update download_history.txt
+
+on:
+  workflow_dispatch:
+  schedule:
+    # Runs every Monday at 8:00 UTC
+    - cron: "0 8 * * 1"
+
+jobs:
+  upgrade:
+    name: Upgrade & Open Pull Request
+    runs-on: ubuntu-latest
+    env:
+      BRANCH_NAME: master
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - name: Upgrade Python dependencies
+        run: |
+          pip install -U uv
+          uv sync
+      - name: Runs the crawler
+        run: |
+            uv run crawler.py
+      - name: Detect changes
+        id: changes
+        run: echo "count=$(git status --porcelain=v1 2>/dev/null | wc -l)" >> $GITHUB_OUTPUT
+      - name: Commit & push changes
+        if: steps.changes.outputs.count > 0
+        run: |
+          git config user.name github-actions
+          git config user.email github-actions@github.com
+          git add .
+          git commit -m "Update download_history.txt"
+          git push origin ${{ github.ref_name }}:$BRANCH_NAME
