@@ -3,7 +3,7 @@ import os
 import sys
 import zipfile
 
-import requests
+import httpx
 import structlog
 from bs4 import BeautifulSoup
 
@@ -33,7 +33,7 @@ logger = structlog.get_logger()
 
 
 def fetch_page_content(url: str) -> str | None:
-    response = requests.get(url)
+    response = httpx.get(url, follow_redirects=True)
     if response.status_code == 200:
         return response.text
     return None
@@ -57,7 +57,7 @@ def exclude_old_drivers(driver_links: list[str]) -> list[str]:
 
 
 def download_jdbc_driver(driver_link: str, dest_dir: str = "downloads") -> bool:
-    response = requests.get(driver_link)
+    response = httpx.get(driver_link, follow_redirects=True)
     if response.status_code == 200:
         f = f"{dest_dir}/{driver_link.split('/')[-1]}"
         with open(f, "wb") as file:
