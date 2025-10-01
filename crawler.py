@@ -3,7 +3,7 @@ import os
 import sys
 import zipfile
 
-import requests
+import httpx
 import structlog
 from bs4 import BeautifulSoup
 
@@ -27,15 +27,32 @@ EXCLUDE_DRIVER_LIST = [
     "SimbaJDBCDriverforGoogleBigQuery42_1.2.1.1001.zip",
     "SimbaJDBCDriverforGoogleBigQuery41_1.2.1.1001.zip",
 ]
+DEFAULT_HTTP_TIMEOUT = 180.0  # 180 seconds
+
 
 # Get logger from structlog
 logger = structlog.get_logger()
 
 
 def fetch_page_content(url: str) -> str | None:
-    response = requests.get(url)
-    if response.status_code == 200:
+    """Gets the HTML for the specified URL. Returns None on failure.
+
+    Exceptions are caught here, logged, and None is returned to the caller.
+    """
+    try:
+        response = httpx.get(url, follow_redirects=True, timeout=DEFAULT_HTTP_TIMEOUT)
+        response.raise_for_status()
         return response.text
+    except httpx.HTTPStatusError as e:
+        logger.error(
+            "HTTP status error while fetching page",
+            url=url,
+            status_code=e.response.status_code if e.response else None,
+        )
+    except httpx.RequestError as e:
+        logger.error("Request error while fetching page", url=url, error=str(e))
+    except Exception as e:
+        logger.error("Unexpected error while fetching page", url=url, error=str(e))
     return None
 
 
@@ -57,16 +74,29 @@ def exclude_old_drivers(driver_links: list[str]) -> list[str]:
 
 
 def download_jdbc_driver(driver_link: str, dest_dir: str = "downloads") -> bool:
-    response = requests.get(driver_link)
-    if response.status_code == 200:
+    try:
+        response = httpx.get(driver_link, follow_redirects=True, timeout=DEFAULT_HTTP_TIMEOUT)
+        response.raise_for_status()
         f = f"{dest_dir}/{driver_link.split('/')[-1]}"
         with open(f, "wb") as file:
             file.write(response.content)
-        if zipfile.is_zipfile(f):
-            return True
-        else:
+
+        if not zipfile.is_zipfile(f):
             logger.error(f"{f} is not a zip file.")
             return False
+
+        return True
+    except httpx.HTTPStatusError as e:
+        logger.error(
+            "HTTP status error while downloading driver",
+            url=driver_link,
+            status_code=e.response.status_code if e.response else None,
+        )
+    except httpx.RequestError as e:
+        logger.error("Request error while downloading driver", url=driver_link, error=str(e))
+    except Exception as e:
+        logger.error("Unexpected error while downloading driver", url=driver_link, error=str(e))
+
     return False
 
 
