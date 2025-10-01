@@ -33,9 +33,24 @@ logger = structlog.get_logger()
 
 
 def fetch_page_content(url: str) -> str | None:
-    response = httpx.get(url, follow_redirects=True)
-    if response.status_code == 200:
+    """Gets the HTML for the specified URL. Returns None on failure.
+
+    Exceptions are caught here, logged, and None is returned to the caller.
+    """
+    try:
+        response = httpx.get(url, follow_redirects=True)
+        response.raise_for_status()
         return response.text
+    except httpx.HTTPStatusError as e:
+        logger.error(
+            "HTTP status error while fetching page",
+            url=url,
+            status_code=e.response.status_code if e.response else None,
+        )
+    except httpx.RequestError as e:
+        logger.error("Request error while fetching page", url=url, error=str(e))
+    except Exception as e:
+        logger.error("Unexpected error while fetching page", url=url, error=str(e))
     return None
 
 
