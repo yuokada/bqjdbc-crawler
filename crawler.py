@@ -72,18 +72,30 @@ def exclude_old_drivers(driver_links: list[str]) -> list[str]:
 
 
 def download_jdbc_driver(driver_link: str, dest_dir: str = "downloads") -> bool:
-    response = httpx.get(driver_link, follow_redirects=True)
-    if response.status_code == 200:
+    try:
+        response = httpx.get(driver_link, follow_redirects=True)
+        response.raise_for_status()
         f = f"{dest_dir}/{driver_link.split('/')[-1]}"
         with open(f, "wb") as file:
             file.write(response.content)
-        if zipfile.is_zipfile(f):
-            return True
-        else:
+
+        if not zipfile.is_zipfile(f):
             logger.error(f"{f} is not a zip file.")
             return False
-    return False
 
+        return True
+    except httpx.HTTPStatusError as e:
+        logger.error(
+            "HTTP status error while downloading driver",
+            url=driver_link,
+            status_code=e.response.status_code if e.response else None,
+        )
+    except httpx.RequestError as e:
+        logger.error("Request error while downloading driver", url=driver_link, error=str(e))
+    except Exception as e:
+        logger.error("Unexpected error while downloading driver", url=driver_link, error=str(e))
+
+    return False
 
 def extract_specific_jar(zip_path: str, extract_to: str = "downloads") -> bool:
     jar_name = DRIVER_FILENAME
