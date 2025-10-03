@@ -276,13 +276,6 @@ func isDownloaded(link string) (bool, error) {
 }
 
 func appendToHistory(link string) error {
-	already, err := isDownloaded(link)
-	if err != nil {
-		return err
-	}
-	if already {
-		return nil
-	}
 	f, err := os.OpenFile(historyFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
 		return err
