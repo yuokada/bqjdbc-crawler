@@ -9,9 +9,10 @@ import (
 	"net/http"
 	"os"
 	"path/filepath"
-	"regexp"
 	"strings"
 	"time"
+
+	"github.com/anaskhan96/soup"
 )
 
 const (
@@ -124,16 +125,17 @@ func fetchPageContent(url string) (string, error) {
 // getDriverDownloadLinks extracts href values that contain "jdbc".
 // For simplicity and zero external deps, use a regex on anchor tags.
 func getDriverDownloadLinks(html string) []string {
-	// Matches href="..." and captures the value; case-insensitive search for jdbc in the value.
-	re := regexp.MustCompile(`(?i)<a[^>]+href\s*=\s*"([^"]+)"[^>]*>`) // "
-	matches := re.FindAllStringSubmatch(html, -1)
 	var out []string
-	for _, m := range matches {
-		if len(m) >= 2 {
-			href := m[1]
-			if strings.Contains(strings.ToLower(href), "jdbc") {
-				out = append(out, href)
-			}
+	doc := soup.HTMLParse(html)
+	anchors := doc.FindAll("a")
+	for _, a := range anchors {
+		attrs := a.Attrs()
+		href, ok := attrs["href"]
+		if !ok || href == "" {
+			continue
+		}
+		if strings.Contains(strings.ToLower(href), "jdbc") {
+			out = append(out, href)
 		}
 	}
 	return out
