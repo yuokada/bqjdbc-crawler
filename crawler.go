@@ -12,7 +12,7 @@ import (
 	"strings"
 	"time"
 
-	"github.com/anaskhan96/soup"
+	"github.com/PuerkitoBio/goquery"
 )
 
 const (
@@ -55,7 +55,10 @@ func run() error {
 		return fmt.Errorf("failed to fetch page content: %w", err)
 	}
 
-	links := getDriverDownloadLinks(page)
+	links, err := getDriverDownloadLinks(page)
+	if err != nil {
+		return fmt.Errorf("failed to parse driver links: %w", err)
+	}
 	for i := range links {
 		links[i] = normalizeURL(links[i])
 	}
@@ -122,23 +125,23 @@ func fetchPageContent(url string) (string, error) {
 	return string(b), nil
 }
 
-// getDriverDownloadLinks extracts href values that contain "jdbc".
-// For simplicity and zero external deps, use a regex on anchor tags.
-func getDriverDownloadLinks(html string) []string {
+// getDriverDownloadLinks extracts href values that contain "jdbc" using goquery.
+func getDriverDownloadLinks(html string) ([]string, error) {
+	doc, err := goquery.NewDocumentFromReader(strings.NewReader(html))
+	if err != nil {
+		return nil, err
+	}
 	var out []string
-	doc := soup.HTMLParse(html)
-	anchors := doc.FindAll("a")
-	for _, a := range anchors {
-		attrs := a.Attrs()
-		href, ok := attrs["href"]
-		if !ok || href == "" {
-			continue
+	doc.Find("a").Each(func(_ int, sel *goquery.Selection) {
+		href, exists := sel.Attr("href")
+		if !exists || href == "" {
+			return
 		}
 		if strings.Contains(strings.ToLower(href), "jdbc") {
 			out = append(out, href)
 		}
-	}
-	return out
+	})
+	return out, nil
 }
 
 func normalizeURL(href string) string {

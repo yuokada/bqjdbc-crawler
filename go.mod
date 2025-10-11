@@ -2,9 +2,9 @@ module bqjdbc-crawler
 
 go 1.24
 
-require github.com/anaskhan96/soup v1.2.5
+require github.com/PuerkitoBio/goquery v1.10.3
 
 require (
-	golang.org/x/net v0.0.0-20200114155413-6afb5195e5aa // indirect
-	golang.org/x/text v0.3.0 // indirect
+	github.com/andybalholm/cascadia v1.3.3 // indirect
+	golang.org/x/net v0.39.0 // indirect
 )
