@@ -15,16 +15,13 @@ jobs:
       BRANCH_NAME: master
     steps:
       - uses: actions/checkout@v5
-      - uses: actions/setup-python@v6
+      - uses: actions/setup-go@v5
         with:
-          python-version: "3.12"
-      - name: Upgrade Python dependencies
-        run: |
-          pip install -U uv
-          uv sync
+          go-version-file: go.mod
+      - name: Download Go modules
+        run: go mod download
       - name: Runs the crawler
-        run: |
-            uv run crawler.py
+        run: go run ./crawler.go
       - name: Detect changes
         id: changes
         run: echo "count=$(git status --porcelain=v1 2>/dev/null | wc -l)" >> $GITHUB_OUTPUT
