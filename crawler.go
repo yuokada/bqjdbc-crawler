@@ -66,7 +66,7 @@ func run() error {
 
 	// Ensure downloads directory exists
 	if err := os.MkdirAll(downloadsDir, 0o755); err != nil {
-		return fmt.Errorf("出力ディレクトリ作成に失敗: %w", err)
+return fmt.Errorf("failed to create downloads directory: %w", err)
 	}
 
 	for _, link := range links {
