@@ -52,7 +52,7 @@ func run() error {
 	fmt.Println("Fetching driver list page...")
 	page, err := fetchPageContent(driverDownloadURL)
 	if err != nil {
-return fmt.Errorf("failed to fetch page content: %w", err)
+		return fmt.Errorf("failed to fetch page content: %w", err)
 	}
 
 	links := getDriverDownloadLinks(page)
