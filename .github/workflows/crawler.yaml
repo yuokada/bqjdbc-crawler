@@ -30,6 +30,6 @@ jobs:
         run: |
           git config user.name github-actions
           git config user.email github-actions@github.com
-          git add .
-          git commit -m "Update download_history.txt"
+          git add download_history.txt downloads/
+          git commit -m "chore: update BigQuery JDBC downloads and history"
           git push origin ${{ github.ref_name }}:$BRANCH_NAME
