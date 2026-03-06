@@ -1,6 +1,11 @@
 package main
 
-import "testing"
+import (
+	"archive/zip"
+	"os"
+	"path/filepath"
+	"testing"
+)
 
 func TestNormalizeURL(t *testing.T) {
 	t.Parallel()
@@ -89,4 +94,54 @@ func TestIsAllowedDriverDownloadURL(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestExtractSpecificJar_NestedPath(t *testing.T) {
+	t.Parallel()
+
+	tmpDir := t.TempDir()
+	zipPath := filepath.Join(tmpDir, "driver.zip")
+
+	if err := createZipWithFile(zipPath, "nested/dir/"+driverFilename, "jar-content"); err != nil {
+		t.Fatalf("create zip: %v", err)
+	}
+
+	if err := extractSpecificJar(zipPath, tmpDir); err != nil {
+		t.Fatalf("extractSpecificJar returned error: %v", err)
+	}
+
+	outPath := filepath.Join(tmpDir, "driver-"+driverFilename)
+	if _, err := os.Stat(outPath); err != nil {
+		t.Fatalf("expected extracted jar at %s: %v", outPath, err)
+	}
+}
+
+func createZipWithFile(zipPath, fileName, body string) (err error) {
+	f, err := os.Create(zipPath)
+	if err != nil {
+		return err
+	}
+	defer func() {
+		if cerr := f.Close(); err == nil && cerr != nil {
+			err = cerr
+		}
+	}()
+
+	zw := zip.NewWriter(f)
+	defer func() {
+		if cerr := zw.Close(); err == nil && cerr != nil {
+			err = cerr
+		}
+	}()
+
+	w, err := zw.Create(fileName)
+	if err != nil {
+		return err
+	}
+
+	if _, err = w.Write([]byte(body)); err != nil {
+		return err
+	}
+
+	return nil
 }
