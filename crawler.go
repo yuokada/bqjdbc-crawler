@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/url"
 	"os"
+	"path"
 	"path/filepath"
 	"strings"
 	"time"
@@ -263,7 +264,7 @@ func extractSpecificJar(zipPath, extractTo string) error {
 
 	var jarFile *zip.File
 	for _, f := range zr.File {
-		if f.Name == driverFilename {
+		if path.Base(f.Name) == driverFilename {
 			jarFile = f
 			break
 		}
