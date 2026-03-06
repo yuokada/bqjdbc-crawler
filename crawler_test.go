@@ -116,22 +116,30 @@ func TestExtractSpecificJar_NestedPath(t *testing.T) {
 	}
 }
 
-func createZipWithFile(zipPath, fileName, body string) error {
+func createZipWithFile(zipPath, fileName, body string) (err error) {
 	f, err := os.Create(zipPath)
 	if err != nil {
 		return err
 	}
-	defer f.Close()
+	defer func() {
+		if cerr := f.Close(); err == nil && cerr != nil {
+			err = cerr
+		}
+	}()
 
 	zw := zip.NewWriter(f)
-	defer zw.Close()
+	defer func() {
+		if cerr := zw.Close(); err == nil && cerr != nil {
+			err = cerr
+		}
+	}()
 
 	w, err := zw.Create(fileName)
 	if err != nil {
 		return err
 	}
 
-	if _, err := w.Write([]byte(body)); err != nil {
+	if _, err = w.Write([]byte(body)); err != nil {
 		return err
 	}
 
