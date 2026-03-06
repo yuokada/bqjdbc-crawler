@@ -9,7 +9,7 @@ on:
 
 jobs:
   upgrade:
-    name: Upgrade & Open Pull Request
+    name: Run crawler and push changes
     runs-on: ubuntu-latest
     env:
       BRANCH_NAME: master
