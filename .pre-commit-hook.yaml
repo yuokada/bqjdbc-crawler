@@ -1,0 +1,14 @@
+- id: gofmt
+  name: gofmt
+  description: Format Go files with gofmt.
+  entry: gofmt -w
+  language: system
+  types: [go]
+
+- id: go-test
+  name: go test
+  description: Run Go tests.
+  entry: go test ./...
+  language: system
+  pass_filenames: false
+  stages: [pre-commit]
