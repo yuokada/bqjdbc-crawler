@@ -7,6 +7,7 @@ import (
 	"fmt"
 	"io"
 	"net/http"
+	"net/url"
 	"os"
 	"path/filepath"
 	"strings"
@@ -41,6 +42,11 @@ var excludeDriverList = map[string]struct{}{
 	"SimbaJDBCDriverforGoogleBigQuery41_1.2.1.1001.zip":  {},
 }
 
+var allowedDriverHosts = map[string]struct{}{
+	"cloud.google.com":       {},
+	"storage.googleapis.com": {},
+}
+
 func main() {
 	if err := run(); err != nil {
 		fmt.Fprintf(os.Stderr, "error: %v\n", err)
@@ -71,6 +77,10 @@ func run() error {
 
 	for _, link := range links {
 		if !strings.HasSuffix(strings.ToLower(link), ".zip") {
+			continue
+		}
+		if !isAllowedDriverDownloadURL(link) {
+			fmt.Printf("skipping untrusted download URL: %s\n", link)
 			continue
 		}
 		already, err := isDownloaded(link)
@@ -145,16 +155,42 @@ func getDriverDownloadLinks(html string) ([]string, error) {
 }
 
 func normalizeURL(href string) string {
-	// 既に絶対 URL ならそのまま
-	low := strings.ToLower(href)
-	if strings.HasPrefix(low, "http://") || strings.HasPrefix(low, "https://") {
+	base, err := url.Parse(driverDownloadURL)
+	if err != nil {
 		return href
 	}
-	// 先頭がスラッシュの相対 URL のみベースドメインを補完
-	if strings.HasPrefix(href, "/") {
-		return "https://cloud.google.com" + href
+
+	ref, err := url.Parse(strings.TrimSpace(href))
+	if err != nil {
+		return href
 	}
-	return href
+
+	return base.ResolveReference(ref).String()
+}
+
+func isAllowedDriverDownloadURL(rawURL string) bool {
+	u, err := url.Parse(rawURL)
+	if err != nil {
+		return false
+	}
+	if strings.ToLower(u.Scheme) != "https" {
+		return false
+	}
+
+	host := strings.ToLower(u.Hostname())
+	if host == "" {
+		return false
+	}
+
+	if _, ok := allowedDriverHosts[host]; ok {
+		return true
+	}
+	for allowedHost := range allowedDriverHosts {
+		if strings.HasSuffix(host, "."+allowedHost) {
+			return true
+		}
+	}
+	return false
 }
 
 func excludeOldDrivers(links []string) []string {
