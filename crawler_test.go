@@ -1,0 +1,92 @@
+package main
+
+import "testing"
+
+func TestNormalizeURL(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		href string
+		want string
+	}{
+		{
+			name: "absolute URL is kept",
+			href: "https://storage.googleapis.com/simba-bq-jdbc-releases/driver.zip",
+			want: "https://storage.googleapis.com/simba-bq-jdbc-releases/driver.zip",
+		},
+		{
+			name: "relative path is resolved",
+			href: "/downloads/driver.zip",
+			want: "https://cloud.google.com/downloads/driver.zip",
+		},
+		{
+			name: "document relative path is resolved",
+			href: "driver.zip",
+			want: "https://cloud.google.com/bigquery/docs/reference/driver.zip",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := normalizeURL(tc.href)
+			if got != tc.want {
+				t.Fatalf("normalizeURL(%q) = %q, want %q", tc.href, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestIsAllowedDriverDownloadURL(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		url  string
+		want bool
+	}{
+		{
+			name: "allowed storage host",
+			url:  "https://storage.googleapis.com/simba-bq-jdbc-releases/driver.zip",
+			want: true,
+		},
+		{
+			name: "allowed cloud host",
+			url:  "https://cloud.google.com/downloads/driver.zip",
+			want: true,
+		},
+		{
+			name: "allowed subdomain host",
+			url:  "https://foo.cloud.google.com/downloads/driver.zip",
+			want: true,
+		},
+		{
+			name: "reject http",
+			url:  "http://cloud.google.com/downloads/driver.zip",
+			want: false,
+		},
+		{
+			name: "reject untrusted host",
+			url:  "https://example.com/driver.zip",
+			want: false,
+		},
+		{
+			name: "reject malformed",
+			url:  "://bad-url",
+			want: false,
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := isAllowedDriverDownloadURL(tc.url)
+			if got != tc.want {
+				t.Fatalf("isAllowedDriverDownloadURL(%q) = %v, want %v", tc.url, got, tc.want)
+			}
+		})
+	}
+}
