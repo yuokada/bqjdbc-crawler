@@ -116,6 +116,118 @@ func TestExtractSpecificJar_NestedPath(t *testing.T) {
 	}
 }
 
+func TestArchiveFilename(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		raw  string
+		want string
+	}{
+		{
+			name: "url with query",
+			raw:  "https://storage.googleapis.com/simba-bq-jdbc-releases/SimbaJDBCDriverforGoogleBigQuery42_1.6.3.1004.zip?download=1",
+			want: "SimbaJDBCDriverforGoogleBigQuery42_1.6.3.1004.zip",
+		},
+		{
+			name: "plain filename",
+			raw:  "SimbaJDBCDriverforGoogleBigQuery42_1.6.3.1004.zip",
+			want: "SimbaJDBCDriverforGoogleBigQuery42_1.6.3.1004.zip",
+		},
+	}
+
+	for _, tc := range tests {
+		tc := tc
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			got := archiveFilename(tc.raw)
+			if got != tc.want {
+				t.Fatalf("archiveFilename(%q) = %q, want %q", tc.raw, got, tc.want)
+			}
+		})
+	}
+}
+
+func TestExcludeOldDrivers_WithQuery(t *testing.T) {
+	t.Parallel()
+
+	links := []string{
+		"https://storage.googleapis.com/simba-bq-jdbc-releases/SimbaJDBCDriverforGoogleBigQuery42_1.5.4.1008.zip?download=1",
+		"https://storage.googleapis.com/simba-bq-jdbc-releases/SimbaJDBCDriverforGoogleBigQuery42_9.9.9.9999.zip?download=1",
+	}
+	got := excludeOldDrivers(links)
+
+	if len(got) != 1 {
+		t.Fatalf("excludeOldDrivers length = %d, want 1", len(got))
+	}
+	if got[0] != links[1] {
+		t.Fatalf("excludeOldDrivers first = %q, want %q", got[0], links[1])
+	}
+}
+
+func TestIsDownloaded_BackwardCompatible(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	oldwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Chdir tmp dir: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(oldwd); err != nil {
+			t.Fatalf("restore cwd: %v", err)
+		}
+	})
+
+	oldHistoryLine := "https://storage.googleapis.com/simba-bq-jdbc-releases/SimbaJDBCDriverforGoogleBigQuery42_1.6.3.1004.zip"
+	if err := os.WriteFile(historyFile, []byte(oldHistoryLine+"\n"), 0o644); err != nil {
+		t.Fatalf("write history: %v", err)
+	}
+
+	target := "https://example.com/mirror/SimbaJDBCDriverforGoogleBigQuery42_1.6.3.1004.zip?x=1"
+	got, err := isDownloaded(target)
+	if err != nil {
+		t.Fatalf("isDownloaded: %v", err)
+	}
+	if !got {
+		t.Fatalf("expected backward-compatible match")
+	}
+}
+
+func TestAppendToHistory_WritesCanonicalKey(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	oldwd, err := os.Getwd()
+	if err != nil {
+		t.Fatalf("Getwd: %v", err)
+	}
+	if err := os.Chdir(tmpDir); err != nil {
+		t.Fatalf("Chdir tmp dir: %v", err)
+	}
+	t.Cleanup(func() {
+		if err := os.Chdir(oldwd); err != nil {
+			t.Fatalf("restore cwd: %v", err)
+		}
+	})
+
+	link := "https://storage.googleapis.com/simba-bq-jdbc-releases/SimbaJDBCDriverforGoogleBigQuery42_1.6.3.1004.zip?download=1"
+	if err := appendToHistory(link); err != nil {
+		t.Fatalf("appendToHistory: %v", err)
+	}
+
+	b, err := os.ReadFile(historyFile)
+	if err != nil {
+		t.Fatalf("ReadFile history: %v", err)
+	}
+	got := string(b)
+	want := "SimbaJDBCDriverforGoogleBigQuery42_1.6.3.1004.zip\n"
+	if got != want {
+		t.Fatalf("history content = %q, want %q", got, want)
+	}
+}
+
 func createZipWithFile(zipPath, fileName, body string) (err error) {
 	f, err := os.Create(zipPath)
 	if err != nil {
