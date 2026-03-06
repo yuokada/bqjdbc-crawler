@@ -197,7 +197,7 @@ func isAllowedDriverDownloadURL(rawURL string) bool {
 func excludeOldDrivers(links []string) []string {
 	var out []string
 	for _, l := range links {
-		base := filepath.Base(l)
+		base := archiveFilename(l)
 		if _, found := excludeDriverList[base]; found {
 			continue
 		}
@@ -220,7 +220,10 @@ func downloadJDBCDriver(url, destDir string) (string, error) {
 		return "", fmt.Errorf("HTTP status %d", resp.StatusCode)
 	}
 
-	filename := filepath.Base(url)
+	filename := archiveFilename(url)
+	if filename == "" || filename == "." || filename == "/" {
+		return "", fmt.Errorf("invalid download filename: %s", url)
+	}
 	destPath := filepath.Join(destDir, filename)
 	f, err := os.Create(destPath)
 	if err != nil {
@@ -296,6 +299,8 @@ func extractSpecificJar(zipPath, extractTo string) error {
 }
 
 func isDownloaded(link string) (bool, error) {
+	targetKey := historyKey(link)
+
 	f, err := os.Open(historyFile)
 	if err != nil {
 		if os.IsNotExist(err) {
@@ -307,7 +312,14 @@ func isDownloaded(link string) (bool, error) {
 
 	s := bufio.NewScanner(f)
 	for s.Scan() {
-		if strings.TrimSpace(s.Text()) == link {
+		line := strings.TrimSpace(s.Text())
+		if line == "" {
+			continue
+		}
+		// Backward-compatible check:
+		// - old format: full URL
+		// - new format: canonical history key (zip filename)
+		if line == link || historyKey(line) == targetKey {
 			return true, nil
 		}
 	}
@@ -318,13 +330,35 @@ func isDownloaded(link string) (bool, error) {
 }
 
 func appendToHistory(link string) error {
+	key := historyKey(link)
+
 	f, err := os.OpenFile(historyFile, os.O_CREATE|os.O_WRONLY|os.O_APPEND, 0o644)
 	if err != nil {
 		return err
 	}
 	defer f.Close()
-	if _, err := f.WriteString(link + "\n"); err != nil {
+	if _, err := f.WriteString(key + "\n"); err != nil {
 		return err
 	}
 	return nil
+}
+
+func historyKey(value string) string {
+	return archiveFilename(value)
+}
+
+func archiveFilename(raw string) string {
+	trimmed := strings.TrimSpace(raw)
+	if trimmed == "" {
+		return ""
+	}
+
+	u, err := url.Parse(trimmed)
+	if err == nil && u.Path != "" {
+		if base := path.Base(u.Path); base != "" && base != "." && base != "/" {
+			return base
+		}
+	}
+
+	return filepath.Base(trimmed)
 }
