@@ -221,8 +221,8 @@ func downloadJDBCDriver(url, destDir string) (string, error) {
 	}
 
 	filename := filepath.Base(url)
-	path := filepath.Join(destDir, filename)
-	f, err := os.Create(path)
+	destPath := filepath.Join(destDir, filename)
+	f, err := os.Create(destPath)
 	if err != nil {
 		return "", err
 	}
@@ -232,10 +232,10 @@ func downloadJDBCDriver(url, destDir string) (string, error) {
 	}
 
 	// Validate zip by trying to open.
-	if err := validateZip(path); err != nil {
+	if err := validateZip(destPath); err != nil {
 		return "", err
 	}
-	return path, nil
+	return destPath, nil
 }
 
 func validateZip(path string) error {
@@ -264,7 +264,7 @@ func extractSpecificJar(zipPath, extractTo string) error {
 
 	var jarFile *zip.File
 	for _, f := range zr.File {
-		if path.Base(f.Name) == driverFilename {
+		if f.FileInfo().Mode().IsRegular() && path.Base(f.Name) == driverFilename {
 			jarFile = f
 			break
 		}
