@@ -14,7 +14,7 @@ Follow these repository instructions when working in this project.
 
 - The main implementation lives in `crawler.go`.
 - Dependency management is defined in `go.mod` and `go.sum`.
-- Downloaded ZIP and JAR artifacts are written under `downloads/`.
+- Downloaded ZIP files are written to `downloads/`, and the main JAR is extracted from them into the same directory.
 - GitHub Actions workflows live under `.github/workflows/`.
 
 ## Validation

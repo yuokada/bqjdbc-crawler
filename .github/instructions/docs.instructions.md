@@ -1,5 +1,5 @@
 ---
-applyTo: "README.md,.github/workflows/**/*.yml,.github/workflows/**/*.yaml"
+applyTo: "**/*.md,.github/workflows/**/*.yml,.github/workflows/**/*.yaml"
 ---
 
 When editing documentation or workflow files in this repository:
